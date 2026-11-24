@@ -115,6 +115,7 @@ function dropAt(e, index) {
 }
 
 function renderTabs() {
+  if (dragId) return; // sürükleme sırasında kaynak sekme silinirse sürükleme kopar
   const box = $('tabs');
   box.replaceChildren();
   const narrow = S.tabs.length > 6;
@@ -144,16 +145,24 @@ function renderTabs() {
         if (e.button !== 0) return;
         if (selectMode) { toggleSelect(t.id); return; }
         if (e.metaKey || e.ctrlKey) { enterSelect(S.activeTabId); toggleSelect(t.id); return; }
+        // Izgara açıkken grup dışı sekme basılınca değil tıklanınca açılır; böylece ızgaraya sürüklenebilir
+        if (S.gridGroupId && !(groupOfTab(t.id) && groupOfTab(t.id).id === S.gridGroupId)) return;
         pt.activateTab(t.id);
+      },
+      onclick: (e) => {
+        if (selectMode || e.metaKey || e.ctrlKey) return;
+        if (S.gridGroupId && !(groupOfTab(t.id) && groupOfTab(t.id).id === S.gridGroupId)) pt.activateTab(t.id);
       },
       onauxclick: (e) => { if (e.button === 1) pt.closeTab(t.id); },
       oncontextmenu: (e) => { e.preventDefault(); pt.tabMenu(t.id); },
-      ondragstart: (e) => { dragId = t.id; node.classList.add('dragging'); e.dataTransfer.setData(DND, t.id); e.dataTransfer.effectAllowed = 'move'; },
+      ondragstart: (e) => { dragId = t.id; node.classList.add('dragging'); e.dataTransfer.setData(DND, t.id); e.dataTransfer.effectAllowed = 'move'; pt.setDragging(true); },
       ondragend: (e) => {
         node.classList.remove('dragging');
+        pt.setDragging(false);
         // Hiçbir yere bırakılmadıysa: pencere dışına çıkarıldı → yeni pencere ya da diğer pencere
         if (e.dataTransfer.dropEffect === 'none') pt.dragEnd(t.id);
         dragId = null;
+        renderTabs();
       },
       ondragover: (e) => { if (hasTabDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; node.classList.add('drop-before'); } },
       ondragleave: () => node.classList.remove('drop-before'),
@@ -187,14 +196,27 @@ function renderGrid() {
   layer.hidden = !on;
   $('gridBtn').setAttribute('aria-pressed', String(!!S.gridGroupId));
   $('gridBtn').title = S.gridGroupId ? 'Tek sekme görünümüne dön (Ctrl/⌘+Shift+G)' : 'Sekmeleri yan yana göster: grup seç ya da oluştur, en fazla 6 (Ctrl/⌘+Shift+G)';
+  // + düğmesi: gösterilen gruba sekme ekle
+  const g = S.gridGroupId && (S.groups || []).find((x) => x.id === S.gridGroupId);
+  const addBtn = $('gridAddBtn');
+  addBtn.hidden = !g;
+  if (g) {
+    const full = g.tabIds.length >= (S.groupMax || 6);
+    addBtn.disabled = full;
+    addBtn.title = full ? `${g.name} dolu (${g.tabIds.length}/${S.groupMax || 6})` : `${g.name} grubuna sekme ekle (${g.tabIds.length}/${S.groupMax || 6})`;
+  }
+  // Sürükleme sırasında bırakma alanı
+  const drop = $('gridDrop');
+  drop.hidden = !(on && S.dragging && g);
+  if (!drop.hidden) {
+    const full = g.tabIds.length >= (S.groupMax || 6);
+    const inGroup = dragId && g.tabIds.includes(dragId);
+    drop.classList.toggle('full', full && !inGroup);
+    drop.querySelector('b').textContent = inGroup ? 'Bu sekme zaten grupta' : full ? `${g.name} dolu` : `${g.name} grubuna eklemek için bırakın`;
+    drop.querySelector('span').textContent = `${g.tabIds.length}/${S.groupMax || 6} sekme`;
+  }
   if (!on) { layer.replaceChildren(); return; }
   layer.replaceChildren(...S.tiles.map((r) => {
-    if (r.add) {
-      return el('button', {
-        class: 'tile tile-add', style: `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`,
-        onclick: () => pt.openPicker(null, r.groupId),
-      }, el('span', { class: 'plus' }, '+'), el('b', {}, 'Bu gruba sekme ekle'), el('span', {}, `${r.count}/${S.groupMax || 6} · ülke ve renk seçin`));
-    }
     const t = S.tabs.find((x) => x.id === r.tabId);
     if (!t) return null;
     const c = tabColor(t);
@@ -459,6 +481,15 @@ function render() { renderTabs(); renderNav(); renderGrid(); renderPicker(); ren
 
 $('newTab').onclick = () => pt.openPicker();
 $('gridBtn').onclick = () => { if (selectMode) exitSelect(); else pt.toggleGrid(); };
+$('gridAddBtn').onclick = () => { if (S.gridGroupId) pt.openPicker(null, S.gridGroupId); };
+$('gridDrop').addEventListener('dragover', (e) => { if (hasTabDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; $('gridDrop').classList.add('over'); } });
+$('gridDrop').addEventListener('dragleave', () => $('gridDrop').classList.remove('over'));
+$('gridDrop').addEventListener('drop', (e) => {
+  e.preventDefault();
+  $('gridDrop').classList.remove('over');
+  const id = e.dataTransfer.getData(DND);
+  if (id && S.gridGroupId) pt.addToGroup(S.gridGroupId, id);
+});
 $('selectBar').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-a]');
   if (!b) return;

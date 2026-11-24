@@ -39,6 +39,9 @@
       <button class="icon-btn" id="gridBtn" aria-label="Tüm sekmeleri yan yana göster" aria-pressed="false">
         <svg viewBox="0 0 16 16"><rect x="2" y="2.5" width="5" height="4.5" rx="1"/><rect x="9" y="2.5" width="5" height="4.5" rx="1"/><rect x="2" y="9" width="5" height="4.5" rx="1"/><rect x="9" y="9" width="5" height="4.5" rx="1"/></svg>
       </button>
+      <button class="icon-btn" id="gridAddBtn" hidden aria-label="Gruba sekme ekle">
+        <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
+      </button>
       <button class="btn" id="nextIpBtn" title="Bu kimliğe aynı ülkeden başka bir IP ver. Oturum korunur.">Yeni IP</button>
       <button class="icon-btn" id="drawerBtn" title="IP havuzu ve şifreler (Ctrl/⌘+Shift+P)" aria-label="IP havuzu ve şifreler">
         <svg viewBox="0 0 16 16"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"/></svg>
@@ -48,6 +51,8 @@
 
   <!-- Izgara görünümünde döşeme başlıkları (sayfalar bunların içine yerleşir) -->
   <div class="grid-layer" id="gridLayer" hidden></div>
+  <!-- Sekme ızgaraya sürüklenirken: gruba bırakma alanı -->
+  <div class="grid-drop" id="gridDrop" hidden><div class="grid-drop-inner"><b></b><span></span></div></div>
 
   <!-- Yeni sekme: ülke ve renk seçici -->
   <section class="picker" id="picker" hidden aria-label="Ülke ve renk seç">

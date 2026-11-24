@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('pt', {
   moveTab: (id, toIndex) => send('tab:move', { id, toIndex }),
   dragEnd: (id) => send('tab:dragEnd', id),
   toggleGrid: () => send('grid:toggle'),
+  setDragging: (on) => send('ui:dragging', !!on),
   go: (text) => send('nav:go', text),
   back: () => send('nav:back'),
   forward: () => send('nav:forward'),

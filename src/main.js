@@ -475,6 +475,7 @@ function snapshot(W) {
       loading: t.loading, connecting: t.connecting, blocked: t.blocked, canGoBack: t.canGoBack, canGoForward: t.canGoForward,
       error: t.error, exitIp: t.exitIp || '',
     })),
+    dragging: tabDragging,
     activeTabId: W.activeTabId, grid: !!W.gridGroupId, gridGroupId: W.gridGroupId, tiles: W.tiles || [],
     groups: W.groups.map((g) => ({ id: g.id, name: g.name, tabIds: g.tabIds.slice() })), groupMax: GROUP_MAX,
     proxies: store.proxies.map((p) => ({ ...p, password: p.password ? '••••' : '' })),
@@ -541,8 +542,7 @@ function layout(W) {
   W.tiles = [];
   if (gridOn) {
     const members = mine.filter((t) => g.tabIds.includes(t.id));
-    const n = members.length + (members.length < GROUP_MAX ? 1 : 0); // boş "sekme ekle" döşemesi
-    const rects = gridRects(n, area);
+    const rects = gridRects(members.length, area);
     for (const t of mine) if (!g.tabIds.includes(t.id) && t.view) { restoreZoom(t); t.view.setVisible(false); }
     members.forEach((t, i) => {
       const r = rects[i];
@@ -550,10 +550,10 @@ function layout(W) {
       if (!t.view) return;
       const width = Math.max(0, r.w - 2 * TILE_PAD);
       t.view.setBounds({ x: r.x + TILE_PAD, y: r.y + TILE_HEAD, width, height: Math.max(0, r.h - TILE_HEAD - TILE_PAD) });
-      t.view.setVisible(true);
+      // Sekme sürüklenirken sayfalar çekilir, altta "gruba bırak" alanı görünür
+      t.view.setVisible(!tabDragging);
       applyGridZoom(t, width);
     });
-    if (members.length < GROUP_MAX) W.tiles.push({ add: true, groupId: g.id, count: members.length, ...rects[members.length] });
   } else {
     for (const t of mine) {
       if (!t.view) continue;
@@ -882,6 +882,7 @@ function toggleGrid(W) {
 /* ---------- Gruplar (yan yana görünüm, en fazla 6 sekme) ---------- */
 
 const GROUP_MAX = 6;
+let tabDragging = false;
 const groupById = (W, id) => W.groups.find((g) => g.id === id);
 const groupOfTab = (W, tabId) => W.groups.find((g) => g.tabIds.includes(tabId));
 
@@ -1213,7 +1214,23 @@ function wire() {
     if (g) showGroup(w, g.id);
   });
   ipcMain.on('group:show', (e, id) => { const w = W(e); if (w) showGroup(w, id); });
-  ipcMain.on('group:add', (e, { groupId, tabId }) => { const w = W(e); if (w && addToGroup(w, groupId, tabId)) { layout(w); saveStore(); } });
+  ipcMain.on('group:add', (e, { groupId, tabId }) => {
+    const w = W(e); const tab = tabs.find((t) => t.id === tabId);
+    if (!w || !tab) return;
+    const g = groupById(w, groupId);
+    if (!g) return;
+    if (g.tabIds.length >= GROUP_MAX && !g.tabIds.includes(tabId)) { notify(`${g.name} dolu (en fazla ${GROUP_MAX} sekme)`, 'warn'); return; }
+    if (tab.winId !== w.id) moveTabToWindow(tab, w); // başka pencereden sürüklendi
+    if (addToGroup(w, groupId, tabId)) { w.gridGroupId = groupId; w.activeTabId = tabId; layout(w); saveStore(); }
+  });
+  ipcMain.on('ui:dragging', (_e, on) => {
+    if (tabDragging === !!on) return;
+    tabDragging = !!on;
+    clearTimeout(global.__dragSafety);
+    // Sürükleme bitiş haberi kaybolursa sayfalar gizli kalmasın
+    if (tabDragging) global.__dragSafety = setTimeout(() => { tabDragging = false; for (const w of liveWins()) layout(w); }, 20000);
+    for (const w of liveWins()) layout(w);
+  });
   ipcMain.on('group:remove', (e, tabId) => { const w = W(e); if (w) { dropFromGroups(w, tabId); layout(w); saveStore(); } });
   ipcMain.on('group:rename', (e, { id, name }) => { const w = W(e); const g = w && groupById(w, id); if (g && String(name).trim()) { g.name = String(name).trim().slice(0, 30); pushState(); saveStore(); } });
   ipcMain.on('group:menu', (e, id) => { const w = W(e); if (w) groupMenu(w, id); });

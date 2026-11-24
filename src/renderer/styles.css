@@ -367,3 +367,19 @@ details.cgroup .slots { padding: 0 8px 8px; }
 .tile-add:active { transform: scale(.99); }
 .tile-add .plus { font-size: 30px; line-height: 1; font-weight: 300; }
 .tile-add b { font-size: 14px; color: var(--ink); }
+
+/* Izgaraya sekme bırakma alanı */
+.grid-drop {
+  position: fixed; top: calc(var(--tab-h) + var(--nav-h)); left: 0; right: 0; bottom: var(--status-h);
+  z-index: 3; padding: 14px; background: color-mix(in srgb, var(--bar) 55%, transparent);
+}
+body.drawer-open .grid-drop { right: var(--drawer-w); }
+.grid-drop-inner {
+  height: 100%; border: 3px dashed var(--ink); border-radius: 12px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; color: var(--ink); background: color-mix(in srgb, var(--surface) 70%, transparent);
+  transition: background-color .12s;
+}
+.grid-drop-inner b { font-size: 18px; }
+.grid-drop-inner span { color: var(--muted); }
+.grid-drop.over .grid-drop-inner { background: var(--surface); border-style: solid; }
+.grid-drop.full .grid-drop-inner { border-color: var(--danger); color: var(--danger); }
