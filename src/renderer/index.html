@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: http:; style-src 'self'; script-src 'self'">
+  <title>SureBrowser</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="chrome">
+    <div class="tabbar" id="tabbar">
+      <div class="tabs" id="tabs" role="tablist" aria-label="Sekmeler"></div>
+      <button class="icon-btn new-tab" id="newTab" title="Yeni sekme: ülke ve renk seç (Ctrl/⌘+T)" aria-label="Yeni sekme">
+        <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
+      </button>
+      <div class="drag-space"></div>
+    </div>
+
+    <nav class="navbar">
+      <button class="icon-btn" id="back" title="Geri" aria-label="Geri"><svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5"/></svg></button>
+      <button class="icon-btn" id="forward" title="İleri" aria-label="İleri"><svg viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></button>
+      <button class="icon-btn" id="reload" title="Yenile" aria-label="Yenile">
+        <svg viewBox="0 0 16 16" class="i-reload"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5V5h-2.5"/></svg>
+        <svg viewBox="0 0 16 16" class="i-stop"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+
+      <button class="color-chip" id="colorChip" title="Sekme menüsü: yeni IP, IP denetimi, verileri temizle">
+        <img class="flag" id="chipFlag" src="flags/xx.svg" alt="">
+        <span class="chip-name"></span>
+        <span class="chip-ip"></span>
+      </button>
+
+      <form class="address" id="addressForm" autocomplete="off">
+        <svg viewBox="0 0 16 16" class="lock"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+        <input id="address" spellcheck="false" placeholder="Adres yazın veya arayın" aria-label="Adres">
+        <span class="load-error" id="loadError" hidden></span>
+      </form>
+
+      <button class="icon-btn" id="gridBtn" aria-label="Tüm sekmeleri yan yana göster" aria-pressed="false">
+        <svg viewBox="0 0 16 16"><rect x="2" y="2.5" width="5" height="4.5" rx="1"/><rect x="9" y="2.5" width="5" height="4.5" rx="1"/><rect x="2" y="9" width="5" height="4.5" rx="1"/><rect x="9" y="9" width="5" height="4.5" rx="1"/></svg>
+      </button>
+      <button class="btn" id="nextIpBtn" title="Bu kimliğe aynı ülkeden başka bir IP ver. Oturum korunur.">Yeni IP</button>
+      <button class="icon-btn" id="drawerBtn" title="IP havuzu ve şifreler (Ctrl/⌘+Shift+P)" aria-label="IP havuzu ve şifreler">
+        <svg viewBox="0 0 16 16"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Izgara görünümünde döşeme başlıkları (sayfalar bunların içine yerleşir) -->
+  <div class="grid-layer" id="gridLayer" hidden></div>
+
+  <!-- Yeni sekme: ülke ve renk seçici -->
+  <section class="picker" id="picker" hidden aria-label="Ülke ve renk seç">
+    <div class="picker-inner">
+      <div class="picker-head">
+        <h1>Hangi ülkeden, hangi renkten IP?</h1>
+        <p>Her ülkenin 10 rengi var; her renk ayrı bir kimlik ve kendi IP'si. Çerezleri, girişleri ve şifreleri o kimlikte saklanır. Açık bir kimliği seçerseniz aynı IP ve oturumla bir sekme daha açılır.</p>
+        <div class="country-jump" id="countryJump"></div>
+      </div>
+      <div id="countryLists"></div>
+      <p class="empty big" id="pickerEmpty" hidden>Havuzda henüz çalışan IP yok. Sağ üstteki listeden IP ekleyin; denetlenince ülkelerine göre burada sıralanır.</p>
+      <div class="picker-foot">
+        <button class="btn ghost" id="directBtn" title="Proxy kullanmadan, gerçek IP ile">Proxysiz sekme (gerçek IP)</button>
+        <button class="btn ghost" id="pickerPool">IP havuzunu aç</button>
+        <button class="btn ghost" id="pickerClose">Vazgeç <kbd>Esc</kbd></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alt çubuk: not etiketi solda -->
+  <footer class="statusbar" id="statusbar">
+    <button class="note-tag" id="noteTag" title="Bu IP'nin notunu düzenle"></button>
+    <input class="note-edit" id="noteEdit" maxlength="80" placeholder="Bu IP için not yazın, Enter" hidden aria-label="IP notu">
+    <span class="status-ip" id="statusIp"></span>
+    <div class="pw-prompt" id="pwPrompt" hidden>
+      <svg viewBox="0 0 16 16"><circle cx="5.5" cy="8" r="3"/><path d="M8.5 8H14M12 8v2.5"/></svg>
+      <span class="pw-text"></span>
+      <button class="btn small primary" data-a="save">Kaydet</button>
+      <button class="btn small ghost" data-a="no">Şimdi değil</button>
+      <button class="btn small ghost" data-a="never">Bu sitede asla</button>
+    </div>
+    <div class="select-bar" id="selectBar" hidden>
+      <span class="sel-text"></span>
+      <button class="btn small primary" data-a="go">Grupla ve yan yana göster</button>
+      <button class="btn small ghost" data-a="cancel">Vazgeç</button>
+    </div>
+    <span class="notice" id="notice" hidden></span>
+    <span class="pool-sum" id="poolSum"></span>
+  </footer>
+
+  <aside class="drawer" id="drawer" hidden aria-label="IP havuzu ve şifreler">
+    <div class="drawer-head">
+      <div class="seg" role="tablist" id="drawerTabs">
+        <button data-t="pool" role="tab">IP havuzu</button>
+        <button data-t="ids" role="tab">Kimlikler</button>
+        <button data-t="pw" role="tab">Şifreler</button>
+      </div>
+      <button class="icon-btn" id="drawerClose" aria-label="Paneli kapat"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    </div>
+
+    <div class="drawer-body" data-panel="pool">
+      <section class="block">
+        <h2 class="sec">IP ekle</h2>
+        <textarea id="importText" rows="4" spellcheck="false" placeholder="Her satıra bir proxy (binlerce olabilir):
+socks5://kullanici:sifre@1.2.3.4:1080
+1.2.3.4:8080:kullanici:sifre
+Instagram hesabı | http://5.6.7.8:3128"></textarea>
+        <div class="import-row">
+          <label class="mini-field"><span>Tür</span>
+            <select id="importType">
+              <option value="http">HTTP</option><option value="https">HTTPS</option>
+              <option value="socks5">SOCKS5</option><option value="socks4">SOCKS4</option>
+            </select>
+          </label>
+          <label class="mini-field"><span>Renk</span><select id="importColor"></select></label>
+          <button class="btn primary" id="importBtn">Havuza ekle</button>
+        </div>
+        <p class="hint">Ülke otomatik bulunur. "Not | proxy" yazarsanız not o IP'ye eklenir.</p>
+        <p class="note" id="importNote" hidden></p>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h2 class="sec">Havuz <span class="count" id="poolCount"></span></h2>
+          <div class="head-actions">
+            <button class="btn ghost small" id="testAll">Hepsini dene</button>
+            <button class="btn ghost small" id="deleteDead">Çökenleri sil</button>
+          </div>
+        </div>
+        <div class="filters">
+          <input id="poolSearch" placeholder="IP, ülke, not veya adres ara" aria-label="Havuzda ara">
+          <select id="poolFilter" aria-label="Duruma göre süz">
+            <option value="all">Tümü</option><option value="ok">Çalışan</option>
+            <option value="dead">Çöken</option><option value="unknown">Denenmedi</option>
+          </select>
+        </div>
+        <ul class="list" id="poolList"></ul>
+        <p class="empty" id="poolMore" hidden></p>
+      </section>
+    </div>
+
+    <div class="drawer-body" data-panel="ids" hidden>
+      <p class="hint top">Her ülkenin 10 kimliği. IP çökerse aynı ülkeden yenisi gelir; çerezler ve girişler kimlikte kalır.</p>
+      <div id="identityGroups"></div>
+    </div>
+
+    <div class="drawer-body" data-panel="pw" hidden>
+      <section class="block">
+        <h2 class="sec">Ayarlar</h2>
+        <label class="check"><input type="checkbox" id="optSave"> Giriş yapınca şifreyi kaydetmeyi öner</label>
+        <label class="check"><input type="checkbox" id="optFill"> Kayıtlı şifreleri otomatik doldur</label>
+        <label class="row-field"><span>Arama motoru</span>
+          <select id="searchSel"><option value="duckduckgo">DuckDuckGo</option><option value="google">Google</option></select>
+        </label>
+      </section>
+      <section class="block">
+        <h2 class="sec">Kayıtlı şifreler <span class="count" id="pwCount"></span></h2>
+        <input id="pwSearch" class="full-input" placeholder="Site veya kullanıcı adı ara" aria-label="Şifrelerde ara">
+        <ul class="list" id="pwList"></ul>
+        <p class="empty" id="pwEmpty">Henüz kayıtlı şifre yok. Bir sitede giriş yaptığınızda alt çubukta sorulur.</p>
+      </section>
+      <section class="block" id="neverBlock">
+        <h2 class="sec">Şifresi hiç kaydedilmeyecek siteler</h2>
+        <ul class="list" id="neverList"></ul>
+      </section>
+    </div>
+  </aside>
+
+  <script src="app.js"></script>
+</body>
+</html>

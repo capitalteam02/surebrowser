@@ -1,0 +1,92 @@
+{
+  "name": "surebrowser",
+  "productName": "SureBrowser",
+  "version": "1.2.0",
+  "description": "Her sekmesi kendi renginde ve kendi IP adresiyle çalışan çoklu kimlik tarayıcısı",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "release": "npm version minor -m \"SureBrowser %s\" && git push --follow-tags",
+    "release:patch": "npm version patch -m \"SureBrowser %s\" && git push --follow-tags"
+  },
+  "build": {
+    "appId": "com.surebrowser.app",
+    "productName": "SureBrowser",
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "build/icon-win.png",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon-win.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "SureBrowser",
+      "artifactName": "SureBrowser-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "dmg": {
+      "artifactName": "SureBrowser-${version}-${arch}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "BURAYA-GITHUB-KULLANICI-ADI",
+      "repo": "surebrowser",
+      "releaseType": "release"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "socks": "^2.8.3"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BURAYA-GITHUB-KULLANICI-ADI/surebrowser.git"
+  }
+}

@@ -1,0 +1,29 @@
+# Sürüm yayınlama: "v1.2.3" etiketi gönderilince Windows kurulumunu ve Mac paketlerini
+# derleyip GitHub Releases'a yükler. Uygulamalar güncellemeleri buradan alır.
+name: release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Derle ve yayınla
+        run: >
+          npx electron-builder ${{ matrix.os == 'windows-latest' && '--win' || '--mac' }} --publish always
+          -c.publish.owner=${{ github.repository_owner }}
+          -c.publish.repo=${{ github.event.repository.name }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false

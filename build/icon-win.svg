@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2d35"/>
+      <stop offset="1" stop-color="#131418"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+  </defs>
+  <rect x="24" y="24" width="976" height="976" rx="200" fill="url(#bg)"/>
+  <rect x="24.5" y="24.5" width="975" height="975" rx="199.5" fill="none" stroke="#fff" stroke-opacity=".08"/>
+  <g id="ring" transform="translate(512 512) scale(1.16)" fill="none" stroke-width="58" stroke-linecap="butt"><path d="M11.43 -261.75 A262 262 0 0 1 144.61 -218.48" stroke="#e5484d"/><path d="M163.10 -205.04 A262 262 0 0 1 245.41 -91.75" stroke="#f76b15"/><path d="M252.47 -70.02 A262 262 0 0 1 252.47 70.02" stroke="#ffc53d"/><path d="M245.41 91.75 A262 262 0 0 1 163.10 205.04" stroke="#30a46c"/><path d="M144.61 218.48 A262 262 0 0 1 11.43 261.75" stroke="#12a594"/><path d="M-11.43 261.75 A262 262 0 0 1 -144.61 218.48" stroke="#0090ff"/><path d="M-163.10 205.04 A262 262 0 0 1 -245.41 91.75" stroke="#3e63dd"/><path d="M-252.47 70.02 A262 262 0 0 1 -252.47 -70.02" stroke="#8e4ec6"/><path d="M-245.41 -91.75 A262 262 0 0 1 -163.10 -205.04" stroke="#d6409f"/><path d="M-144.61 -218.48 A262 262 0 0 1 -11.43 -261.75" stroke="#a07553"/></g>
+  <text x="512" y="512" dy=".355em" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="383" fill="#fff">S</text>
+</svg>
