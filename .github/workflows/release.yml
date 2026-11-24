@@ -8,22 +8,43 @@ on:
 permissions:
   contents: write
 jobs:
+  # Yayını bir kez oluştur; derlemeler aynı anda yayın açmaya çalışıp çift kayıt üretmesin
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Yayını oluştur
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$REPO" --title "SureBrowser ${TAG#v}" --notes "SureBrowser ${TAG#v}"
+
   build:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            target: --win --x64
+          - os: macos-latest
+            target: --mac
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash   # Windows'ta da bash: PowerShell "-c.publish.owner=..." gibi argümanları bozuyor
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22 }
       - run: npm ci
       - name: Derle ve yayınla
-        run: >
-          npx electron-builder ${{ matrix.os == 'windows-latest' && '--win' || '--mac' }} --publish always
-          -c.publish.owner=${{ github.repository_owner }}
-          -c.publish.repo=${{ github.event.repository.name }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: >
+          npx electron-builder ${{ matrix.target }} --publish always
+          -c.publish.owner=${{ github.repository_owner }}
+          -c.publish.repo=${{ github.event.repository.name }}

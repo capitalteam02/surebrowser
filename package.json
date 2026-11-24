@@ -1,7 +1,7 @@
 {
   "name": "surebrowser",
   "productName": "SureBrowser",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Her sekmesi kendi renginde ve kendi IP adresiyle çalışan çoklu kimlik tarayıcısı",
   "main": "src/main.js",
   "scripts": {
@@ -72,7 +72,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "BURAYA-GITHUB-KULLANICI-ADI",
+      "owner": "capitalteam02",
       "repo": "surebrowser",
       "releaseType": "release"
     }
@@ -87,6 +87,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/BURAYA-GITHUB-KULLANICI-ADI/surebrowser.git"
+    "url": "https://github.com/capitalteam02/surebrowser.git"
   }
 }
