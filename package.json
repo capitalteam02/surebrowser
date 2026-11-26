@@ -1,7 +1,7 @@
 {
   "name": "surebrowser",
   "productName": "SureBrowser",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Her sekmesi kendi renginde ve kendi IP adresiyle çalışan çoklu kimlik tarayıcısı",
   "main": "src/main.js",
   "scripts": {

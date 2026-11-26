@@ -18,7 +18,7 @@ const updater = require('./updater');
  * - Uygulama kapanırken sekmeler, sıraları, geçmişleri ve etkin sekme kaydedilir; açılışta geri gelir.
  */
 
-const TOP_H = 84;       // renderer/styles.css --tab-h + --nav-h
+const TOP_H = 118;      // renderer/styles.css --group-h + --tab-h + --nav-h
 const BOTTOM_H = 30;    // renderer/styles.css --status-h
 const DRAWER_W = 420;   // renderer/styles.css --drawer-w
 
@@ -476,6 +476,8 @@ function snapshot(W) {
       error: t.error, exitIp: t.exitIp || '',
     })),
     dragging: tabDragging,
+    currentGroupId: (currentGroupOf(W) || {}).id || null,
+    windowTitle: titleFor(W),
     activeTabId: W.activeTabId, grid: !!W.gridGroupId, gridGroupId: W.gridGroupId, tiles: W.tiles || [],
     groups: W.groups.map((g) => ({ id: g.id, name: g.name, tabIds: g.tabIds.slice() })), groupMax: GROUP_MAX,
     proxies: store.proxies.map((p) => ({ ...p, password: p.password ? '••••' : '' })),
@@ -489,11 +491,34 @@ function snapshot(W) {
 }
 
 let pushTimer = null;
+function titleFor(W) {
+  const t = activeTabOf(W);
+  if (!t) return 'SureBrowser';
+  const p = t.proxyId && getProxy(t.proxyId);
+  const g = currentGroupOf(W);
+  const parts = [];
+  if (p && p.note) parts.push(p.note);
+  parts.push(t.slot ? slotLabel(t.slot) : 'Proxysiz');
+  if (p) parts.push(p.exitIp);
+  if (g) parts.push(g.name);
+  return parts.join(' · ') + ' — SureBrowser';
+}
+
+// Şu an bulunulan grup: gösterilen ızgara ya da etkin sekmenin grubu
+function currentGroupOf(W) {
+  if (W.gridGroupId) { const g = groupById(W, W.gridGroupId); if (g) return g; }
+  return W.activeTabId ? groupOfTab(W, W.activeTabId) || null : null;
+}
+
 function pushState() {
   if (pushTimer) return;
   pushTimer = setTimeout(() => {
     pushTimer = null;
-    for (const W of liveWins()) W.win.webContents.send('state', snapshot(W));
+    for (const W of liveWins()) {
+      const title = titleFor(W);
+      if (W.win.getTitle() !== title) W.win.setTitle(title);
+      W.win.webContents.send('state', snapshot(W));
+    }
   }, store.proxies.length > 300 ? 200 : 40);
 }
 
@@ -582,7 +607,7 @@ function createWindow({ id = uid(), bounds = null, maximized = false, groups = [
     icon: path.join(__dirname, '..', 'build', process.platform === 'win32' ? 'icon-win.png' : 'icon.png'),
     backgroundColor: '#f4f4f2',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 14, y: 12 },
+    trafficLightPosition: { x: 14, y: 11 },
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
   };
@@ -771,13 +796,15 @@ async function openTab({ winId = null, slot = null, url = null, activate = true,
   return tab;
 }
 
-function activateTab(id) {
+function activateTab(id, { single = false } = {}) {
   const t = tabs.find((x) => x.id === id);
   if (!t) return;
   const W = winOf(t);
   W.activeTabId = id;
   W.pickerOpen = false;
-  if (W.gridGroupId) { const g = groupById(W, W.gridGroupId); if (!g || !g.tabIds.includes(id)) W.gridGroupId = null; }
+  if (single) W.gridGroupId = null;
+  if (!groupOfTab(W, id)) W.lastLooseTabId = id;
+  else if (W.gridGroupId) { const g = groupById(W, W.gridGroupId); if (!g || !g.tabIds.includes(id)) W.gridGroupId = null; }
   layout(W);
   if (t.view && t.url !== 'about:blank') t.view.webContents.focus();
   saveStore();
@@ -927,6 +954,33 @@ function addToGroup(W, groupId, tabId) {
   g2.tabIds.push(tabId);
   compactGroup(W, g2);
   return true;
+}
+
+function moveGroupToWindow(W1, g, W2) {
+  if (!W1 || !g || !W2 || W2.win.isDestroyed()) return;
+  const ids = g.tabIds.slice();
+  const name = g.name;
+  for (const id of ids) { const t = tabs.find((x) => x.id === id); if (t) moveTabToWindow(t, W2); }
+  const ng = createGroup(W2, ids);
+  if (ng) { ng.name = W2.groups.some((x) => x !== ng && x.name === name) ? nextGroupName(W2) : name; showGroup(W2, ng.id); }
+  W2.win.focus();
+  saveStore();
+}
+
+async function onGroupDragEnd(W1, groupId) {
+  const g = W1 && groupById(W1, groupId);
+  if (!g) return;
+  const p = global.__ptTestCursor || screen.getCursorScreenPoint();
+  const inside = (b) => p.x >= b.x && p.x < b.x + b.width && p.y >= b.y && p.y < b.y + b.height;
+  if (inside(W1.win.getBounds())) return;
+  const target = liveWins().find((W) => W !== W1 && inside(W.win.getBounds()));
+  if (target) { moveGroupToWindow(W1, g, target); return; }
+  // Penceredeki tek şey bu grupsa pencereyi taşı
+  if (tabsOf(W1).every((t) => g.tabIds.includes(t.id))) { W1.win.setPosition(Math.round(p.x - 160), Math.round(p.y - 18)); return; }
+  const [w, h] = W1.win.getSize();
+  const W2 = createWindow({ bounds: { x: Math.round(p.x - 160), y: Math.round(p.y - 18), width: w, height: h } });
+  await W2.ready;
+  moveGroupToWindow(W1, g, W2);
 }
 
 function showGroup(W, groupId) {
@@ -1214,14 +1268,23 @@ function wire() {
     if (g) showGroup(w, g.id);
   });
   ipcMain.on('group:show', (e, id) => { const w = W(e); if (w) showGroup(w, id); });
-  ipcMain.on('group:add', (e, { groupId, tabId }) => {
+  ipcMain.on('group:add', (e, { groupId, tabId, focus }) => {
     const w = W(e); const tab = tabs.find((t) => t.id === tabId);
     if (!w || !tab) return;
     const g = groupById(w, groupId);
     if (!g) return;
     if (g.tabIds.length >= GROUP_MAX && !g.tabIds.includes(tabId)) { notify(`${g.name} dolu (en fazla ${GROUP_MAX} sekme)`, 'warn'); return; }
     if (tab.winId !== w.id) moveTabToWindow(tab, w); // başka pencereden sürüklendi
-    if (addToGroup(w, groupId, tabId)) { w.gridGroupId = groupId; w.activeTabId = tabId; layout(w); saveStore(); }
+    const wasActive = w.activeTabId === tabId;
+    w.__prevGroup = groupOfTab(w, tabId) || null;
+    if (addToGroup(w, groupId, tabId)) {
+      if (focus) { w.gridGroupId = groupId; w.activeTabId = tabId; } // ızgaraya bırakıldı: o gruba geç
+      else if (wasActive) { // etkin sekme başka gruba gitti: bulunulan grupta kal
+        const rest = tabsOf(w).filter((t) => t.id !== tabId && (groupOfTab(w, t.id) || null) === (w.__prevGroup || null));
+        if (rest.length) w.activeTabId = rest[0].id;
+      }
+      layout(w); saveStore();
+    }
   });
   ipcMain.on('ui:dragging', (_e, on) => {
     if (tabDragging === !!on) return;
@@ -1231,11 +1294,31 @@ function wire() {
     if (tabDragging) global.__dragSafety = setTimeout(() => { tabDragging = false; for (const w of liveWins()) layout(w); }, 20000);
     for (const w of liveWins()) layout(w);
   });
-  ipcMain.on('group:remove', (e, tabId) => { const w = W(e); if (w) { dropFromGroups(w, tabId); layout(w); saveStore(); } });
+  ipcMain.on('group:remove', (e, tabId) => {
+    const w = W(e); const tab = tabs.find((t) => t.id === tabId);
+    if (!w || !tab) return;
+    if (tab.winId !== w.id) moveTabToWindow(tab, w); // başka pencereden "Grupsuz"a bırakıldı
+    dropFromGroups(w, tabId);
+    if (w.gridGroupId && !(groupById(w, w.gridGroupId) || { tabIds: [] }).tabIds.includes(w.activeTabId)) w.gridGroupId = null;
+    layout(w); saveStore();
+  });
+  ipcMain.on('group:ungroupedView', (e) => {
+    const w = W(e); if (!w) return;
+    const loose = tabsOf(w).filter((t) => !groupOfTab(w, t.id));
+    w.gridGroupId = null;
+    if (loose.length) activateTab((loose.find((t) => t.id === w.lastLooseTabId) || loose[loose.length - 1]).id, { single: true });
+    else openPicker(w);
+  });
+  ipcMain.on('group:dragEnd', (e, id) => onGroupDragEnd(W(e), id));
+  ipcMain.on('group:attach', (e, id) => {
+    const w = W(e); if (!w) return;
+    const src = liveWins().find((x) => groupById(x, id));
+    if (src && src !== w) moveGroupToWindow(src, groupById(src, id), w);
+  });
   ipcMain.on('group:rename', (e, { id, name }) => { const w = W(e); const g = w && groupById(w, id); if (g && String(name).trim()) { g.name = String(name).trim().slice(0, 30); pushState(); saveStore(); } });
   ipcMain.on('group:menu', (e, id) => { const w = W(e); if (w) groupMenu(w, id); });
   ipcMain.on('tab:close', (_e, id) => closeTab(id));
-  ipcMain.on('tab:activate', (_e, id) => activateTab(id));
+  ipcMain.on('tab:activate', (_e, id, opts) => activateTab(id, opts || {}));
   ipcMain.on('tab:menu', (_e, id) => tabContextMenu(id));
   ipcMain.on('tab:move', (e, { id, toIndex }) => {
     const tab = tabs.find((t) => t.id === id); const w = W(e);

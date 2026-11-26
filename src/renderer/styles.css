@@ -1,6 +1,7 @@
 :root {
+  --group-h: 34px;       /* grup satırı */
   --tab-h: 38px;
-  --nav-h: 46px;          /* toplam 84px = main.js TOP_H */
+  --nav-h: 46px;          /* toplam 118px = main.js TOP_H */
   --status-h: 30px;       /* = main.js BOTTOM_H */
   --drawer-w: 420px;      /* = main.js DRAWER_W */
   --bg: #e7e6e2;
@@ -38,12 +39,12 @@ kbd { font: 11px ui-monospace, Menlo, monospace; padding: 1px 4px; border: 1px s
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- Sekme çubuğu ---------- */
-.chrome { position: fixed; inset: 0 0 auto 0; height: calc(var(--tab-h) + var(--nav-h)); z-index: 2; }
+.chrome { position: fixed; inset: 0 0 auto 0; height: calc(var(--group-h) + var(--tab-h) + var(--nav-h)); z-index: 2; }
 .tabbar {
   height: var(--tab-h); display: flex; align-items: flex-end; gap: 3px;
   padding: 0 8px; background: var(--bg); -webkit-app-region: drag;
 }
-body.mac .tabbar { padding-left: 80px; }
+body.mac .grouprow { padding-left: 80px; }
 .tabs { display: flex; align-items: flex-end; gap: 3px; min-width: 0; flex: 0 1 auto; overflow: hidden; height: 100%; }
 .drag-space { flex: 1; height: 100%; }
 
@@ -121,8 +122,9 @@ body.mac .tabbar { padding-left: 80px; }
 }
 .color-chip:hover { filter: brightness(1.06); }
 .color-chip:active { transform: scale(.97); }
-.chip-name { font-weight: 700; font-size: 12px; }
-.chip-ip { font-size: 12px; opacity: .9; font-variant-numeric: tabular-nums; }
+.chip-note { font-weight: 800; font-size: 13px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.chip-sub { font-size: 11.5px; opacity: .88; white-space: nowrap; }
+.chip-ip { font-variant-numeric: tabular-nums; }
 
 .address {
   flex: 1; min-width: 120px; height: 32px; display: flex; align-items: center; gap: 8px;
@@ -140,7 +142,7 @@ body.mac .tabbar { padding-left: 80px; }
 
 /* ---------- Ülke ve renk seçici ---------- */
 .picker {
-  position: fixed; top: calc(var(--tab-h) + var(--nav-h)); left: 0; right: 0; bottom: var(--status-h);
+  position: fixed; top: calc(var(--group-h) + var(--tab-h) + var(--nav-h)); left: 0; right: 0; bottom: var(--status-h);
   background: var(--bar); overflow: auto; padding: 32px 32px 40px;
 }
 body.drawer-open .picker { right: var(--drawer-w); }
@@ -212,7 +214,7 @@ body.drawer-open .picker { right: var(--drawer-w); }
 
 /* ---------- Çekmece ---------- */
 .drawer {
-  position: fixed; top: calc(var(--tab-h) + var(--nav-h)); right: 0; bottom: var(--status-h); width: var(--drawer-w);
+  position: fixed; top: calc(var(--group-h) + var(--tab-h) + var(--nav-h)); right: 0; bottom: var(--status-h); width: var(--drawer-w);
   background: var(--bar); border-left: 1px solid var(--line); display: flex; flex-direction: column; z-index: 2;
 }
 .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px 6px 16px; }
@@ -336,19 +338,6 @@ details.cgroup .slots { padding: 0 8px 8px; }
 #gridBtn[aria-pressed="true"] { background: var(--c); color: var(--c-ink); }
 
 /* ---------- Gruplar ---------- */
-.group-chip {
-  -webkit-app-region: no-drag; flex: none; align-self: center; margin: 4px 2px 0 6px;
-  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 12px;
-  border: 0; background: var(--ink); color: var(--bar); font-size: 11.5px; font-weight: 600; white-space: nowrap;
-  transition: transform .08s, filter .12s;
-}
-.group-chip:hover { filter: brightness(1.25); }
-.group-chip:active { transform: scale(.96); }
-.group-chip.on { box-shadow: 0 0 0 2px var(--bar), 0 0 0 4px var(--ink); }
-.group-chip svg { width: 12px; height: 12px; }
-.group-rename { -webkit-app-region: no-drag; align-self: center; margin: 4px 2px 0 6px; height: 24px; width: 120px; border: 2px solid var(--ink); border-radius: 12px; padding: 0 9px; font-size: 12px; background: var(--surface); outline: 0; }
-.tab.grouped { box-shadow: inset 0 -3px 0 var(--ink); }
-.tab.grouped.active { box-shadow: inset 0 -3px 0 var(--ink); }
 .tab.selecting { cursor: pointer; }
 .tab.selected { outline: 2px solid var(--ink); outline-offset: -2px; }
 .tab .tick { width: 15px; height: 15px; flex: none; border-radius: 4px; border: 1.5px solid currentColor; display: grid; place-items: center; font-size: 11px; font-weight: 800; line-height: 1; }
@@ -370,7 +359,7 @@ details.cgroup .slots { padding: 0 8px 8px; }
 
 /* Izgaraya sekme bırakma alanı */
 .grid-drop {
-  position: fixed; top: calc(var(--tab-h) + var(--nav-h)); left: 0; right: 0; bottom: var(--status-h);
+  position: fixed; top: calc(var(--group-h) + var(--tab-h) + var(--nav-h)); left: 0; right: 0; bottom: var(--status-h);
   z-index: 3; padding: 14px; background: color-mix(in srgb, var(--bar) 55%, transparent);
 }
 body.drawer-open .grid-drop { right: var(--drawer-w); }
@@ -383,3 +372,36 @@ body.drawer-open .grid-drop { right: var(--drawer-w); }
 .grid-drop-inner span { color: var(--muted); }
 .grid-drop.over .grid-drop-inner { background: var(--surface); border-style: solid; }
 .grid-drop.full .grid-drop-inner { border-color: var(--danger); color: var(--danger); }
+
+/* ---------- Grup satırı (en üst) ---------- */
+.grouprow {
+  height: var(--group-h); display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  background: color-mix(in srgb, var(--bg) 82%, var(--ink)); -webkit-app-region: drag;
+}
+.groups { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; flex: 0 1 auto; }
+.gchip {
+  -webkit-app-region: no-drag; flex: none; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px;
+  border-radius: 12px; border: 1.5px solid color-mix(in srgb, var(--ink) 35%, transparent); background: transparent;
+  color: var(--ink); font-size: 12px; font-weight: 600; white-space: nowrap; transition: background-color .12s, transform .08s, border-color .12s;
+}
+.gchip:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.gchip:active { transform: scale(.96); }
+.gchip .n { font-weight: 500; opacity: .7; }
+.gchip svg { width: 12px; height: 12px; }
+.gchip.current { background: var(--ink); color: var(--bar); border-color: var(--ink); }
+.gchip.current::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3dd68c; }
+.gchip.drop-over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.gchip.loose { border-style: dashed; }
+.gchip.add { border-style: dashed; opacity: .8; }
+.gchip.dragging { opacity: .45; }
+.gchip-rename { -webkit-app-region: no-drag; height: 24px; width: 130px; border: 2px solid var(--ink); border-radius: 12px; padding: 0 9px; font-size: 12px; background: var(--surface); outline: 0; }
+.win-title {
+  flex: 1; min-width: 0; text-align: right; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.win-title b { color: var(--ink); }
+/* Sekme satırı: hangi grubun sekmeleri */
+.tabrow-label {
+  -webkit-app-region: no-drag; flex: none; align-self: center; margin: 3px 6px 0 2px; padding: 0 9px; height: 22px; line-height: 22px;
+  border-radius: 6px; background: var(--ink); color: var(--bar); font-size: 11.5px; font-weight: 700; white-space: nowrap;
+}
+.tabrow-label.loose { background: transparent; color: var(--muted); border: 1.5px dashed var(--line); line-height: 19px; }

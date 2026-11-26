@@ -8,7 +8,12 @@
 </head>
 <body>
   <header class="chrome">
+    <div class="grouprow" id="grouprow">
+      <div class="groups" id="groups" aria-label="Gruplar"></div>
+      <div class="win-title" id="winTitle"></div>
+    </div>
     <div class="tabbar" id="tabbar">
+      <span class="tabrow-label" id="tabrowLabel"></span>
       <div class="tabs" id="tabs" role="tablist" aria-label="Sekmeler"></div>
       <button class="icon-btn new-tab" id="newTab" title="Yeni sekme: ülke ve renk seç (Ctrl/⌘+T)" aria-label="Yeni sekme">
         <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
@@ -26,8 +31,8 @@
 
       <button class="color-chip" id="colorChip" title="Sekme menüsü: yeni IP, IP denetimi, verileri temizle">
         <img class="flag" id="chipFlag" src="flags/xx.svg" alt="">
-        <span class="chip-name"></span>
-        <span class="chip-ip"></span>
+        <span class="chip-note" id="chipNote"></span>
+        <span class="chip-sub"><span class="chip-name"></span> · <span class="chip-ip"></span></span>
       </button>
 
       <form class="address" id="addressForm" autocomplete="off">

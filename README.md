@@ -41,7 +41,13 @@ uyarısı gösterebilir: "Ek bilgi → Yine de çalıştır". Bu uyarıyı kald�
 - **Her kimliğin kendi hafızası var.** Çerezler, girişler, önbellek ve site verileri kimliğe aittir ve diskte saklanır. Sekmeyi kapatıp aynı kimliği sonra açarsanız oturumunuz durur.
 - **IP çökerse aynı ülkeden yenisi gelir, oturum korunur.** Aktif IP'ler dakikada bir, tüm havuz 20 dakikada bir denetlenir.
 - **Bir kimlik istediğiniz kadar sekmede açılabilir** (aynı IP, aynı oturum). Farklı kimlikler aynı IP'yi paylaşmaz.
-- **Gruplar ve yan yana görünüm (en fazla 6 sekme):** ızgara düğmesine (Ctrl/⌘+Shift+G) basın ya da Ctrl/⌘ ile sekmelere tıklayın, sekmeleri seçip "Grupla ve yan yana göster" deyin. Grup sekmeleri pencereye sığacak şekilde dizilir ve küçültülür. Gruba sekme eklemek için: ızgara düğmesinin yanındaki **+** düğmesi (ülke ve renk seçip yeni sekme açar) ya da sekme çubuğundan bir sekmeyi tutup ızgaranın üstüne sürükleyip bırakın. Sekme çubuğundaki grup etiketine tıklayınca grup yan yana açılır; çift tık: yeniden adlandır, sağ tık: grubu çöz / sekmeleri kapat. Sekmeye sağ tık → "Gruba ekle / Gruptan çıkar".
+- **Gruplar (en fazla 6 sekme):** En üst satırda "Grupsuz" ve grup etiketleri var; bulunduğunuz grup dolu renkte ve ● işaretli. Sekme satırında yalnızca o grubun sekmeleri görünür, solunda grubun adı yazar. "+ Yeni grup" ya da ızgara düğmesiyle sekmeleri seçip grup oluşturun.
+  - Grup etiketine tıklayın: grup yan yana açılır. Gruptaki bir sekmeye tıklayın: yalnızca o sekme açılır.
+  - Gruba sekme eklemek: ızgara düğmesinin yanındaki **+**, ya da sekmeyi ızgaranın üstüne sürükleyin.
+  - Sekmeyi başka bir grubun etiketine sürükleyin: o gruba taşınır. "Grupsuz"a bırakın: gruptan çıkar.
+  - Grup etiketini pencere dışına sürükleyin: grup tüm sekmeleriyle yeni pencerede açılır. Başka pencerenin grup satırına bırakırsanız oraya taşınır.
+  - Çift tık: yeniden adlandır · Sağ tık: grubu çöz / sekmeleri kapat.
+- **IP notu** adres çubuğunun solunda ve pencere adında görünür (Not · Ülke · Renk · IP · Grup).
 - **Sekmeyi pencereden dışarı sürükleyin:** ayrı bir pencerede açılır (Chrome gibi). Başka pencerenin sekme çubuğuna bırakırsanız oraya geçer. Ctrl/⌘+N yeni pencere.
 - **İzin sorusu yok:** bildirim, konum, kamera/mikrofon, pano gibi izinler sormadan verilir; indirmeler doğrudan İndirilenler klasörüne gider.
 - **Şifreler (Chrome gibi):** Bir sitede giriş yapınca alt çubukta "şifre kaydedilsin mi?" diye sorulur. Kayıtlı şifre, o kimlikte siteye girince otomatik doldurulur. Şifreler kimliğe özeldir: Türkiye · Kırmızı'nın şifresi Almanya · Kırmızı'da doldurulmaz. Liste, gösterme, kopyalama ve silme: panelde "Şifreler".

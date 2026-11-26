@@ -85,25 +85,81 @@ function toggleSelect(id) {
 }
 function flashSelectBar() { const b = $('selectBar'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
 
+const GDND = 'application/x-surebrowser-group';
+let dragGroupId = null;
+const hasGroupDrag = (e) => [...(e.dataTransfer.types || [])].includes(GDND);
+const GRID_ICON = '<rect x="2" y="2.5" width="5" height="4.5" rx="1"/><rect x="9" y="2.5" width="5" height="4.5" rx="1"/><rect x="2" y="9" width="5" height="4.5" rx="1"/><rect x="9" y="9" width="5" height="4.5" rx="1"/>';
+
+// Grup etiketi sekme bırakma hedefi: sekmeyi o gruba taşır (null: "Grupsuz" → gruptan çıkar)
+function tabDropTarget(node, groupId) {
+  node.addEventListener('dragover', (e) => {
+    if (hasTabDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; node.classList.add('drop-over'); }
+    else if (hasGroupDrag(e) && groupId !== undefined) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+  });
+  node.addEventListener('dragleave', () => node.classList.remove('drop-over'));
+  node.addEventListener('drop', (e) => {
+    node.classList.remove('drop-over');
+    const tid = e.dataTransfer.getData(DND);
+    const gid = e.dataTransfer.getData(GDND);
+    if (tid) { e.preventDefault(); if (groupId) pt.addToGroup(groupId, tid); else pt.removeFromGroup(tid); }
+    else if (gid) { e.preventDefault(); pt.attachGroup(gid); }
+  });
+}
+
 function groupChip(g) {
-  const isOn = S.gridGroupId === g.id;
+  const isCur = S.currentGroupId === g.id;
   if (renamingGroup === g.id) {
-    const input = el('input', { class: 'group-rename', value: g.name, maxlength: '30', 'aria-label': 'Grup adı' });
+    const input = el('input', { class: 'gchip-rename', value: g.name, maxlength: '30', 'aria-label': 'Grup adı' });
     const done = (save) => { if (renamingGroup !== g.id) return; renamingGroup = null; if (save && input.value.trim()) pt.renameGroup(g.id, input.value); render(); };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); });
     input.addEventListener('blur', () => done(true));
     setTimeout(() => { input.focus(); input.select(); }, 0);
     return input;
   }
-  return el('button', {
-    class: 'group-chip' + (isOn ? ' on' : ''),
-    title: `${g.name}: yan yana göster (çift tık: yeniden adlandır, sağ tık: seçenekler)`,
+  const node = el('button', {
+    class: 'gchip' + (isCur ? ' current' : ''),
+    title: `${g.name}: yan yana göster\nSekmeyi buraya sürükleyin: bu gruba taşır\nEtiketi pencere dışına sürükleyin: grup yeni pencerede açılır\nÇift tık: yeniden adlandır · Sağ tık: seçenekler`,
+    draggable: 'true',
     onclick: () => pt.showGroup(g.id),
     ondblclick: () => { renamingGroup = g.id; render(); },
     oncontextmenu: (e) => { e.preventDefault(); pt.groupMenu(g.id); },
-  }, svg('<rect x="2" y="2.5" width="5" height="4.5" rx="1"/><rect x="9" y="2.5" width="5" height="4.5" rx="1"/><rect x="2" y="9" width="5" height="4.5" rx="1"/><rect x="9" y="9" width="5" height="4.5" rx="1"/>', 12),
-  `${g.name} ${g.tabIds.length}/${S.groupMax || 6}`);
+    ondragstart: (e) => { dragGroupId = g.id; node.classList.add('dragging'); e.dataTransfer.setData(GDND, g.id); e.dataTransfer.effectAllowed = 'move'; },
+    ondragend: (e) => {
+      node.classList.remove('dragging');
+      if (e.dataTransfer.dropEffect === 'none') pt.groupDragEnd(g.id); // pencere dışına bırakıldı → yeni pencere
+      dragGroupId = null;
+      renderGroups();
+    },
+  }, svg(GRID_ICON, 12), g.name, el('span', { class: 'n' }, `${g.tabIds.length}/${S.groupMax || 6}`));
+  tabDropTarget(node, g.id);
+  return node;
 }
+
+function renderGroups() {
+  if (dragGroupId) return;
+  const box = $('groups');
+  const groups = S.groups || [];
+  const loose = S.tabs.filter((t) => !groupOfTab(t.id)).length;
+  const looseChip = el('button', {
+    class: 'gchip loose' + (S.currentGroupId ? '' : ' current'),
+    title: 'Gruba ait olmayan sekmeler\nSekmeyi buraya sürükleyin: gruptan çıkar',
+    onclick: () => pt.ungroupedView(),
+  }, 'Grupsuz', el('span', { class: 'n' }, String(loose)));
+  tabDropTarget(looseChip, null);
+  const addChip = el('button', { class: 'gchip add', title: 'Sekmeleri seçip yeni grup oluştur (en fazla 6)', onclick: () => enterSelect(S.activeTabId) }, '+ Yeni grup');
+  box.replaceChildren(looseChip, ...groups.map(groupChip), addChip);
+  // Pencere adı: IP notu · kimlik · IP · grup
+  const t = activeTab(); const p = t && tabProxy(t);
+  const wt = $('winTitle');
+  wt.replaceChildren();
+  if (t) {
+    if (p && p.note) wt.append(el('b', {}, p.note), ' · ');
+    wt.append((S.windowTitle || '').replace(/ — SureBrowser$/, '').replace(p && p.note ? p.note + ' · ' : '', ''));
+  }
+}
+$('grouprow').addEventListener('dragover', (e) => { if (hasGroupDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; } });
+$('grouprow').addEventListener('drop', (e) => { const gid = e.dataTransfer.getData(GDND); if (gid && !e.target.closest('.gchip')) { e.preventDefault(); pt.attachGroup(gid); } });
+
 let dragId = null;
 const hasTabDrag = (e) => [...(e.dataTransfer.types || [])].includes(DND);
 function dropAt(e, index) {
@@ -118,14 +174,21 @@ function renderTabs() {
   if (dragId) return; // sürükleme sırasında kaynak sekme silinirse sürükleme kopar
   const box = $('tabs');
   box.replaceChildren();
-  const narrow = S.tabs.length > 6;
-  const seenGroups = new Set();
+  // Sekme satırı yalnızca bulunulan grubun (ya da grupsuz) sekmelerini gösterir
+  const cur = S.currentGroupId || null;
+  const shown = S.tabs.filter((t) => ((groupOfTab(t.id) || {}).id || null) === cur);
+  const narrow = shown.length > 6;
+  const curGroup = cur && (S.groups || []).find((g) => g.id === cur);
+  const lbl = $('tabrowLabel');
+  lbl.textContent = curGroup ? curGroup.name : 'Grupsuz';
+  lbl.className = 'tabrow-label' + (curGroup ? '' : ' loose');
+  lbl.title = curGroup ? `Şu an ${curGroup.name} grubundasınız` : 'Şu an gruba ait olmayan sekmeler';
   S.tabs.forEach((t, index) => {
+    const g = groupOfTab(t.id);
+    if (((g || {}).id || null) !== cur) return;
     const c = tabColor(t);
     const p = tabProxy(t);
     const cc = t.slot ? parseSlot(t.slot).cc : null;
-    const g = groupOfTab(t.id);
-    if (g && !seenGroups.has(g.id)) { seenGroups.add(g.id); box.append(groupChip(g)); }
     let icon;
     if (t.loading || t.connecting) icon = el('span', { class: 'spinner' });
     else if (t.favicon) {
@@ -145,13 +208,14 @@ function renderTabs() {
         if (e.button !== 0) return;
         if (selectMode) { toggleSelect(t.id); return; }
         if (e.metaKey || e.ctrlKey) { enterSelect(S.activeTabId); toggleSelect(t.id); return; }
-        // Izgara açıkken grup dışı sekme basılınca değil tıklanınca açılır; böylece ızgaraya sürüklenebilir
-        if (S.gridGroupId && !(groupOfTab(t.id) && groupOfTab(t.id).id === S.gridGroupId)) return;
-        pt.activateTab(t.id);
+        // Izgara açıkken basınca değil tıklayınca açılır; böylece sekme sürüklenebilir
+        if (S.gridGroupId) return;
+        pt.activateTab(t.id, { single: true });
       },
       onclick: (e) => {
         if (selectMode || e.metaKey || e.ctrlKey) return;
-        if (S.gridGroupId && !(groupOfTab(t.id) && groupOfTab(t.id).id === S.gridGroupId)) pt.activateTab(t.id);
+        // Gruptayken sekmeye tıklamak yalnızca o sekmeyi açar (ızgaradan çıkar)
+        if (S.gridGroupId) pt.activateTab(t.id, { single: true });
       },
       onauxclick: (e) => { if (e.button === 1) pt.closeTab(t.id); },
       oncontextmenu: (e) => { e.preventDefault(); pt.tabMenu(t.id); },
@@ -251,6 +315,8 @@ function renderNav() {
   const cc = t && t.slot ? parseSlot(t.slot).cc : null;
   $('chipFlag').hidden = !cc;
   if (cc) $('chipFlag').src = flagSrc(cc);
+  $('chipNote').textContent = p && p.note ? p.note : '';
+  $('chipNote').hidden = !(p && p.note);
   document.querySelector('.chip-name').textContent = t ? (t.slot ? `${countryName(cc)} · ${c.name}` : 'Proxysiz') : '';
   document.querySelector('.chip-ip').textContent = !t ? '' : !t.slot ? 'gerçek IP' : t.connecting ? 'denetleniyor…' : p ? p.exitIp : 'IP yok';
   $('colorChip').hidden = !t;
@@ -475,7 +541,7 @@ function renderDrawer() {
   else renderPasswords();
 }
 
-function render() { renderTabs(); renderNav(); renderGrid(); renderPicker(); renderDrawer(); }
+function render() { renderGroups(); renderTabs(); renderNav(); renderGrid(); renderPicker(); renderDrawer(); }
 
 /* ---------- Olaylar ---------- */
 
@@ -488,7 +554,7 @@ $('gridDrop').addEventListener('drop', (e) => {
   e.preventDefault();
   $('gridDrop').classList.remove('over');
   const id = e.dataTransfer.getData(DND);
-  if (id && S.gridGroupId) pt.addToGroup(S.gridGroupId, id);
+  if (id && S.gridGroupId) pt.addToGroup(S.gridGroupId, id, true);
 });
 $('selectBar').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-a]');
