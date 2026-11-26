@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('pt', {
   goTab: (id, text) => send('tab:go', { id, text }),
   navTab: (id, action) => send('tab:nav', { id, action }),
   swapTiles: (a, b) => send('group:swap', { a, b }),
+  winBounds: () => ipcRenderer.invoke('win:bounds'),
+  setWinBounds: (b) => send('win:setBounds', b),
   go: (text) => send('nav:go', text),
   back: () => send('nav:back'),
   forward: () => send('nav:forward'),

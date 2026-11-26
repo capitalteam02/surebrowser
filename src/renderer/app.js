@@ -137,6 +137,9 @@ function groupChip(g) {
 
 function renderGroups() {
   if (dragGroupId) return;
+  // Grup adı yazılırken satırı yeniden çizme: kutu silinip odak kaybolur ve hemen kapanır
+  const editing = document.querySelector('#groups .gchip-rename');
+  if (renamingGroup && editing) { renderWinTitle(); return; }
   const box = $('groups');
   const groups = S.groups || [];
   const loose = S.tabs.filter((t) => !groupOfTab(t.id)).length;
@@ -148,7 +151,11 @@ function renderGroups() {
   tabDropTarget(looseChip, null);
   const addChip = el('button', { class: 'gchip add', title: 'Sekmeleri seçip yeni grup oluştur (en fazla 6)', onclick: () => enterSelect(S.activeTabId) }, '+ Yeni grup');
   box.replaceChildren(looseChip, ...groups.map(groupChip), addChip);
-  // Pencere adı: IP notu · kimlik · IP · grup
+  renderWinTitle();
+}
+
+// Pencere adı: IP notu · kimlik · IP · grup
+function renderWinTitle() {
   const t = activeTab(); const p = t && tabProxy(t);
   const wt = $('winTitle');
   wt.replaceChildren();
@@ -617,7 +624,11 @@ function renderDrawer() {
   else renderPasswords();
 }
 
-function render() { renderGroups(); renderTabs(); renderNav(); renderGrid(); renderPicker(); renderDrawer(); }
+function renderEdges() {
+  document.body.classList.toggle('edges', !!S.edge && !S.maximized);
+}
+
+function render() { renderEdges(); renderGroups(); renderTabs(); renderNav(); renderGrid(); renderPicker(); renderDrawer(); }
 
 /* ---------- Olaylar ---------- */
 
@@ -719,3 +730,37 @@ pt.onFocusAddress(() => { addr.focus(); addr.select(); });
 pt.onState((s) => { S = s; render(); });
 pt.getState().then((s) => { S = s; render(); });
 setInterval(renderNav, 5000);
+
+/* ---------- Pencere kenarından boyutlandırma (Windows) ---------- */
+(function resizeGrips() {
+  let drag = null; let raf = 0; let pending = null;
+  const flush = () => { raf = 0; if (pending) { pt.setWinBounds(pending); pending = null; } };
+  document.querySelectorAll('.rz').forEach((g) => {
+    g.addEventListener('pointerdown', async (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      g.setPointerCapture(e.pointerId);
+      const b = await pt.winBounds();
+      if (!b) return;
+      drag = { e: g.dataset.e, sx: e.screenX, sy: e.screenY, b };
+    });
+    g.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.screenX - drag.sx; const dy = e.screenY - drag.sy;
+      const b = { ...drag.b }; const ed = drag.e;
+      if (ed.includes('e')) b.width = drag.b.width + dx;
+      if (ed.includes('s')) b.height = drag.b.height + dy;
+      if (ed.includes('w')) { b.x = drag.b.x + dx; b.width = drag.b.width - dx; }
+      if (ed.includes('n')) { b.y = drag.b.y + dy; b.height = drag.b.height - dy; }
+      // En küçük boyuta gelince karşı kenar kaymasın
+      if (b.width < 760) { if (ed.includes('w')) b.x = drag.b.x + drag.b.width - 760; b.width = 760; }
+      if (b.height < 500) { if (ed.includes('n')) b.y = drag.b.y + drag.b.height - 500; b.height = 500; }
+      pending = b;
+      if (!raf) raf = requestAnimationFrame(flush);
+    });
+    const end = (e) => { if (drag) { try { g.releasePointerCapture(e.pointerId); } catch {} } drag = null; };
+    g.addEventListener('pointerup', end);
+    g.addEventListener('pointercancel', end);
+    g.addEventListener('dblclick', () => {}); // çift tık pencereyi büyütmesin diye yutulur
+  });
+})();

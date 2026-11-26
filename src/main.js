@@ -20,7 +20,9 @@ const updater = require('./updater');
 
 const TOP_H = 118;      // renderer/styles.css --group-h + --tab-h + --nav-h
 const BOTTOM_H = 30;    // renderer/styles.css --status-h
-const DRAWER_W = 420;   // renderer/styles.css --drawer-w
+const DRAWER_W = 420;
+// Windows: pencere kenarlarında tutma şeridi kalsın diye sayfalar kenardan içeri alınır (renderer/styles.css .rz)
+const EDGE = process.platform === 'win32' || process.env.PT_FORCE_EDGE ? 6 : 0;   // renderer/styles.css --drawer-w
 
 const COLORS = [
   { key: 'red', name: 'Kırmızı', hex: '#e5484d' },
@@ -468,7 +470,7 @@ function snapshot(W) {
   }
   const mine = tabsOf(W);
   return {
-    windowId: W.id, windowCount: liveWins().length,
+    windowId: W.id, windowCount: liveWins().length, edge: EDGE, maximized: W.win.isMaximized(),
     colors: COLORS, countries, slots,
     tabs: mine.map((t) => ({
       id: t.id, slot: t.slot, proxyId: t.proxyId, title: t.title, url: t.url, favicon: t.favicon,
@@ -559,7 +561,7 @@ function restoreZoom(t) {
 function layout(W) {
   if (!W || W.win.isDestroyed()) return;
   const [w, h] = W.win.getContentSize();
-  const area = { x: 0, y: TOP_H, w: Math.max(200, w - (W.drawerOpen ? DRAWER_W : 0)), h: Math.max(0, h - TOP_H - BOTTOM_H) };
+  const area = { x: EDGE, y: TOP_H, w: Math.max(200, w - (W.drawerOpen ? DRAWER_W : 0) - 2 * EDGE), h: Math.max(0, h - TOP_H - BOTTOM_H) };
   const mine = tabsOf(W);
   const g = W.gridGroupId && groupById(W, W.gridGroupId);
   if (W.gridGroupId && !g) W.gridGroupId = null;
@@ -583,7 +585,7 @@ function layout(W) {
     for (const t of mine) {
       if (!t.view) continue;
       restoreZoom(t);
-      t.view.setBounds({ x: 0, y: TOP_H, width: area.w, height: area.h });
+      t.view.setBounds({ x: area.x, y: TOP_H, width: area.w, height: area.h });
       t.view.setVisible(t.id === W.activeTabId && !W.pickerOpen);
     }
   }
@@ -1361,6 +1363,15 @@ function wire() {
     const g = groupOfTab(w, a);
     if (g && g.tabIds.includes(b)) g.tabIds = tabsOf(w).filter((t) => g.tabIds.includes(t.id)).map((t) => t.id);
     layout(w); saveStore();
+  });
+  // Kendi kenar şeritlerimizle pencere boyutlandırma (Windows)
+  ipcMain.handle('win:bounds', (e) => { const w = W(e); return w ? { ...w.win.getBounds(), maximized: w.win.isMaximized() } : null; });
+  ipcMain.on('win:setBounds', (e, b) => {
+    const w = W(e); if (!w || !b) return;
+    if (w.win.isMaximized()) w.win.unmaximize();
+    const [minW, minH] = w.win.getMinimumSize();
+    const r = { x: Math.round(b.x), y: Math.round(b.y), width: Math.max(minW, Math.round(b.width)), height: Math.max(minH, Math.round(b.height)) };
+    w.win.setBounds(r);
   });
   ipcMain.on('nav:back', (e) => act(e, (wc) => wc.navigationHistory.goBack()));
   ipcMain.on('nav:forward', (e) => act(e, (wc) => wc.navigationHistory.goForward()));
