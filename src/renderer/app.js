@@ -219,7 +219,7 @@ function renderTabs() {
       },
       onauxclick: (e) => { if (e.button === 1) pt.closeTab(t.id); },
       oncontextmenu: (e) => { e.preventDefault(); pt.tabMenu(t.id); },
-      ondragstart: (e) => { dragId = t.id; node.classList.add('dragging'); e.dataTransfer.setData(DND, t.id); e.dataTransfer.effectAllowed = 'move'; pt.setDragging(true); },
+      ondragstart: (e) => { dragId = t.id; node.classList.add('dragging'); e.dataTransfer.setData(DND, t.id); e.dataTransfer.effectAllowed = 'move'; pt.setDragging('tab'); },
       ondragend: (e) => {
         node.classList.remove('dragging');
         pt.setDragging(false);
@@ -271,7 +271,7 @@ function renderGrid() {
   }
   // Sürükleme sırasında bırakma alanı
   const drop = $('gridDrop');
-  drop.hidden = !(on && S.dragging && g);
+  drop.hidden = !(on && S.dragging === 'tab' && g);
   if (!drop.hidden) {
     const full = g.tabIds.length >= (S.groupMax || 6);
     const inGroup = dragId && g.tabIds.includes(dragId);
@@ -279,22 +279,98 @@ function renderGrid() {
     drop.querySelector('b').textContent = inGroup ? 'Bu sekme zaten grupta' : full ? `${g.name} dolu` : `${g.name} grubuna eklemek için bırakın`;
     drop.querySelector('span').textContent = `${g.tabIds.length}/${S.groupMax || 6} sekme`;
   }
-  if (!on) { layer.replaceChildren(); return; }
-  layer.replaceChildren(...S.tiles.map((r) => {
-    const t = S.tabs.find((x) => x.id === r.tabId);
-    if (!t) return null;
-    const c = tabColor(t);
-    const p = tabProxy(t);
-    return el('div', {
-      class: 'tile' + (t.id === S.activeTabId ? ' active' : ''),
-      style: `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--tc:${c.hex};--tc-ink:${inkFor(c.hex)}`,
+  const keep = new Set();
+  if (on) {
+    for (const r of S.tiles) {
+      const t = S.tabs.find((x) => x.id === r.tabId);
+      if (!t) continue;
+      let T = tileEls.get(t.id);
+      if (!T) { T = buildTile(t.id); tileEls.set(t.id, T); layer.append(T.el); }
+      updateTile(T, r, t);
+      keep.add(t.id);
+    }
+  }
+  for (const [id, T] of tileEls) if (!keep.has(id)) { T.el.remove(); tileEls.delete(id); }
+  layer.classList.toggle('tile-dragging', S.dragging === 'tile');
+}
+
+/* Izgara kutuları kalıcı tutulur: adres çubuğuna yazarken ya da kutu sürüklenirken yeniden çizilip bozulmasınlar */
+const TDND = 'application/x-surebrowser-tile';
+const hasTileDrag = (e) => [...(e.dataTransfer.types || [])].includes(TDND);
+const tileEls = new Map();
+let dragTileId = null;
+const NAV_ICON = {
+  back: '<path d="M10 3L5 8l5 5"/>',
+  forward: '<path d="M6 3l5 5-5 5"/>',
+  reload: '<path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5V5h-2.5"/>',
+};
+
+function buildTile(id) {
+  const T = { id };
+  const navBtn = (action, label) => el('button', {
+    class: 'tnav', 'aria-label': label, title: label,
+    onmousedown: (e) => e.stopPropagation(),
+    onclick: () => pt.navTab(id, T.loading && action === 'reload' ? 'stop' : action),
+  }, svg(NAV_ICON[action], 13));
+  T.flag = el('img', { class: 'flag', alt: '' });
+  T.grip = el('span', {
+    class: 'grip', draggable: 'true', title: 'Tutup başka bir kutunun üstüne bırakın: yer değiştirir',
+    ondragstart: (e) => {
+      dragTileId = id; e.dataTransfer.setData(TDND, id); e.dataTransfer.effectAllowed = 'move';
+      T.el.classList.add('dragging');
+      pt.setDragging('tile');
     },
-    el('div', { class: 'tile-head', onmousedown: () => pt.activateTab(t.id), oncontextmenu: (e) => { e.preventDefault(); pt.tabMenu(t.id); } },
-      t.slot ? flagImg(parseSlot(t.slot).cc) : null,
-      el('span', { class: 'tile-title' }, tabTitle(t)),
-      el('span', { class: 'tile-ip' }, p ? p.exitIp : (t.slot ? '' : 'gerçek IP')),
-      el('button', { class: 'close', 'aria-label': 'Sekmeyi kapat', onmousedown: (e) => e.stopPropagation(), onclick: () => pt.closeTab(t.id) }, svg(ICON.close, 12))));
-  }));
+    ondragend: () => { T.el.classList.remove('dragging'); dragTileId = null; pt.setDragging(false); },
+  }, el('span', { class: 'dots', 'aria-hidden': 'true' }, '⠿'), T.flag);
+  T.back = navBtn('back', 'Geri');
+  T.forward = navBtn('forward', 'İleri');
+  T.reload = navBtn('reload', 'Yenile');
+  T.input = el('input', { class: 'tile-addr', spellcheck: 'false', 'aria-label': 'Adres', placeholder: 'Adres yazın veya arayın' });
+  T.input.addEventListener('focus', () => { T.editing = true; T.input.select(); pt.activateTab(id); });
+  T.input.addEventListener('blur', () => { T.editing = false; T.input.value = T.url; });
+  T.input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); T.editing = false; pt.goTab(id, T.input.value); T.input.blur(); }
+    if (e.key === 'Escape') { T.input.value = T.url; T.input.blur(); }
+  });
+  T.note = el('span', { class: 'tile-note' });
+  T.ip = el('span', { class: 'tile-ip' });
+  T.close = el('button', { class: 'close', 'aria-label': 'Sekmeyi kapat', onmousedown: (e) => e.stopPropagation(), onclick: () => pt.closeTab(id) }, svg(ICON.close, 12));
+  T.head = el('div', {
+    class: 'tile-head',
+    onmousedown: (e) => { if (!e.target.closest('input, button')) pt.activateTab(id); },
+    oncontextmenu: (e) => { e.preventDefault(); pt.tabMenu(id); },
+  }, T.grip, T.back, T.forward, T.reload, T.input, T.note, T.ip, T.close);
+  T.el = el('div', { class: 'tile' }, T.head);
+  // Kutu sürüklenirken sayfalar çekilir; bütün kutu bırakma hedefi olur
+  T.el.addEventListener('dragover', (e) => { if (hasTileDrag(e) && dragTileId !== id) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; T.el.classList.add('swap-over'); } });
+  T.el.addEventListener('dragleave', (e) => { if (!T.el.contains(e.relatedTarget)) T.el.classList.remove('swap-over'); });
+  T.el.addEventListener('drop', (e) => {
+    T.el.classList.remove('swap-over');
+    const from = e.dataTransfer.getData(TDND);
+    if (from && from !== id) { e.preventDefault(); pt.swapTiles(from, id); }
+  });
+  return T;
+}
+
+function updateTile(T, r, t) {
+  const c = tabColor(t);
+  const p = tabProxy(t);
+  T.el.className = 'tile' + (t.id === S.activeTabId ? ' active' : '') + (dragTileId === t.id ? ' dragging' : '');
+  T.el.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;--tc:${c.hex};--tc-ink:${inkFor(c.hex)}`;
+  const cc = t.slot ? parseSlot(t.slot).cc : null;
+  T.flag.hidden = !cc;
+  if (cc && T.flag.dataset.cc !== cc) { T.flag.dataset.cc = cc; T.flag.src = flagSrc(cc); }
+  T.back.disabled = !t.canGoBack;
+  T.forward.disabled = !t.canGoForward;
+  T.loading = t.loading;
+  T.reload.classList.toggle('loading', !!t.loading);
+  T.url = t.url && t.url !== 'about:blank' ? t.url : '';
+  if (!T.editing) T.input.value = T.url;
+  T.input.title = tabTitle(t);
+  T.note.textContent = p && p.note ? p.note : '';
+  T.note.hidden = !(p && p.note);
+  T.ip.textContent = p ? p.exitIp : (t.slot ? (t.connecting ? 'denetleniyor…' : 'IP yok') : 'gerçek IP');
+  T.head.title = `${tabTitle(t)}\n${t.slot ? identLabel(t.slot) : 'Proxysiz'}${p ? ' · ' + p.exitIp : ''}`;
 }
 
 /* ---------- Gezinme ve alt çubuk ---------- */

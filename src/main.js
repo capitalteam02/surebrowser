@@ -428,7 +428,7 @@ function prepareSession(ses) {
 
 /* ---------------- Pencereler ve sekmeler ---------------- */
 
-const TILE_HEAD = 28;   // ızgara görünümünde döşeme başlığı (renderer/styles.css .tile-head)
+const TILE_HEAD = 36;   // ızgara görünümünde döşeme başlığı + adres çubuğu (renderer/styles.css .tile-head)
 const TILE_PAD = 3;
 const TILE_GAP = 6;
 
@@ -1286,9 +1286,11 @@ function wire() {
       layout(w); saveStore();
     }
   });
+  // on: 'tab' (sekme sürükleniyor), 'tile' (ızgara kutusu sürükleniyor) ya da false
   ipcMain.on('ui:dragging', (_e, on) => {
-    if (tabDragging === !!on) return;
-    tabDragging = !!on;
+    const kind = on === 'tile' ? 'tile' : on ? 'tab' : false;
+    if (tabDragging === kind) return;
+    tabDragging = kind;
     clearTimeout(global.__dragSafety);
     // Sürükleme bitiş haberi kaybolursa sayfalar gizli kalmasın
     if (tabDragging) global.__dragSafety = setTimeout(() => { tabDragging = false; for (const w of liveWins()) layout(w); }, 20000);
@@ -1331,6 +1333,35 @@ function wire() {
     if (t.blocked) { pushState(); return; }
     wc.loadURL(t.url).catch(() => {}); wc.focus();
   }));
+  // Izgaradaki kutunun kendi adres çubuğu ve düğmeleri
+  ipcMain.on('tab:go', (_e, { id, text }) => {
+    const t = tabs.find((x) => x.id === id);
+    if (!t || !t.view) return;
+    t.url = normalizeInput(text); t.error = null; t.loadedOnce = true;
+    if (t.blocked) { pushState(); return; }
+    t.view.webContents.loadURL(t.url).catch(() => {});
+    t.view.webContents.focus();
+  });
+  ipcMain.on('tab:nav', (_e, { id, action }) => {
+    const t = tabs.find((x) => x.id === id);
+    if (!t || !t.view) return;
+    const wc = t.view.webContents;
+    if (action === 'back') wc.navigationHistory.goBack();
+    else if (action === 'forward') wc.navigationHistory.goForward();
+    else if (action === 'stop') wc.stop();
+    else wc.reload();
+  });
+  // Izgarada iki kutunun yerini değiştir
+  ipcMain.on('group:swap', (e, { a, b }) => {
+    const w = W(e); if (!w || a === b) return;
+    const ta = tabs.find((x) => x.id === a); const tb = tabs.find((x) => x.id === b);
+    if (!ta || !tb || ta.winId !== w.id || tb.winId !== w.id) return;
+    const ia = tabs.indexOf(ta); const ib = tabs.indexOf(tb);
+    tabs[ia] = tb; tabs[ib] = ta;
+    const g = groupOfTab(w, a);
+    if (g && g.tabIds.includes(b)) g.tabIds = tabsOf(w).filter((t) => g.tabIds.includes(t.id)).map((t) => t.id);
+    layout(w); saveStore();
+  });
   ipcMain.on('nav:back', (e) => act(e, (wc) => wc.navigationHistory.goBack()));
   ipcMain.on('nav:forward', (e) => act(e, (wc) => wc.navigationHistory.goForward()));
   ipcMain.on('nav:reload', (e) => act(e, (wc) => wc.reload()));

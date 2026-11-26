@@ -44,6 +44,7 @@ uyarısı gösterebilir: "Ek bilgi → Yine de çalıştır". Bu uyarıyı kald�
 - **Gruplar (en fazla 6 sekme):** En üst satırda "Grupsuz" ve grup etiketleri var; bulunduğunuz grup dolu renkte ve ● işaretli. Sekme satırında yalnızca o grubun sekmeleri görünür, solunda grubun adı yazar. "+ Yeni grup" ya da ızgara düğmesiyle sekmeleri seçip grup oluşturun.
   - Grup etiketine tıklayın: grup yan yana açılır. Gruptaki bir sekmeye tıklayın: yalnızca o sekme açılır.
   - Gruba sekme eklemek: ızgara düğmesinin yanındaki **+**, ya da sekmeyi ızgaranın üstüne sürükleyin.
+  - Izgarada her kutunun kendi adres çubuğu ve geri/ileri/yenile düğmeleri var. Kutuyu sol üstteki ⠿ tutamacından tutup başka bir kutunun üstüne bırakın: yer değiştirirler.
   - Sekmeyi başka bir grubun etiketine sürükleyin: o gruba taşınır. "Grupsuz"a bırakın: gruptan çıkar.
   - Grup etiketini pencere dışına sürükleyin: grup tüm sekmeleriyle yeni pencerede açılır. Başka pencerenin grup satırına bırakırsanız oraya taşınır.
   - Çift tık: yeniden adlandır · Sağ tık: grubu çöz / sekmeleri kapat.
