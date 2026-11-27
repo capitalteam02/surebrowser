@@ -1,0 +1,6 @@
+<resources>
+    <style name="SbTheme" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorAccent">#0B6BCB</item>
+        <item name="android:windowBackground">#ECEBE8</item>
+    </style>
+</resources>

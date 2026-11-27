@@ -2,6 +2,25 @@
 
 Her sekmesi ayrı proxy ve ayrı oturumla (çerez, giriş, önbellek) çalışan çoklu kimlik tarayıcısı. Windows ve macOS.
 
+## Android (Samsung Galaxy Z Fold ve diğer Android cihazlar)
+
+`android/` klasöründe yerel bir Android uygulaması (Kotlin + Android WebView) var. Masaüstüyle aynı mantık:
+ülke + renk kimlikleri, IP havuzu ve sağlık denetimi, IP notu, şifre kaydetme/doldurma, oturumların geri yüklenmesi.
+
+- **Her kimlik ayrı Android işleminde ve ayrı pencerede açılır:** kendi IP'si, çerezleri, önbelleği. (Android WebView tek işlemde tek proxy kullanabildiği için.) Aynı anda en fazla 12 kimlik.
+- **Yan yana:** kimliğe basılı tutup "Yan yana aç" ya da kimlik penceresinde ⋮ → "Başka kimliği yan yana aç". Fold'un bölünmüş ekranı kullanılır.
+- **Katla/aç:** iç ekranda kimlikler 4-5 sütun, dış ekranda 2 sütun; sayfalar yeniden yüklenmez.
+- **IP çökerse** aynı ülkeden yenisi gelir, oturum korunur; IP yoksa bağlantı kesilir (gerçek IP'ye düşmez). WebRTC kapalı.
+- **Güncelleme:** açılışta GitHub Releases'taki yeni APK'yı denetler; "Güncelle" deyince indirip Android kurulumunu açar. İlk seferde Android "bilinmeyen uygulamaları yükleme" izni ister.
+
+Derleme (Java 17 + Android SDK):
+
+    cd android && ./gradlew assembleRelease
+
+İmza anahtarı depoda değildir (`~/Library/Android/surebrowser-release.jks`). GitHub'da APK'nın derlenmesi için
+`SB_KEYSTORE_BASE64` ve `SB_KEYSTORE_PASSWORD` gizli değerleri tanımlanmalı. Aynı anahtar korunmalı;
+anahtar değişirse telefondaki uygulama güncellenemez.
+
 ## Çalıştırma (geliştirme)
 
     npm install

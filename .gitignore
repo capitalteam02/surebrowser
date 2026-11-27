@@ -3,3 +3,10 @@ dist/
 .DS_Store
 *.tmp
 .impeccable/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.kotlin/
+*.jks
+*.keystore
